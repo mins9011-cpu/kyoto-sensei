@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a0a2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>京都先生 — AI語言顧問</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vermillion:#c0392b;--gold:#c9a84c;--gold-light:#f0d98a;
+  --deep:#1a0a2e;--surface:#241535;--surface2:#2e1d45;
+  --border:rgba(201,168,76,0.25);--text:#e8dfc8;
+  --text-dim:rgba(232,223,200,0.55);--mist:#8b9bb4;
+  --radius:18px;--tab-h:72px;--header-h:64px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;overflow:hidden;font-family:'Noto Sans JP',sans-serif;background:var(--deep);color:var(--text)}
+#app{display:flex;flex-direction:column;height:100dvh;width:100%;position:relative;overflow:hidden}
+
+/* HEADER */
+#header{height:var(--header-h);background:linear-gradient(180deg,#0f0720 0%,rgba(15,7,32,0) 100%);display:flex;align-items:center;padding:0 20px;gap:12px;position:relative;z-index:20;border-bottom:1px solid rgba(201,168,76,0.12);flex-shrink:0}
+.header-mon{width:38px;height:38px;background:radial-gradient(circle at 40% 40%,var(--gold-light),var(--gold));border-radius:50%;display:grid;place-items:center;font-size:18px;box-shadow:0 0 18px rgba(201,168,76,0.4);flex-shrink:0}
+.header-title{flex:1;font-family:'DM Serif Display',serif;font-size:20px;color:var(--gold-light);letter-spacing:.02em}
+.header-title span{font-family:'Noto Serif JP',serif;font-size:12px;color:var(--text-dim);display:block;margin-top:-2px}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:pulse-dot 2s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+
+/* SCREENS */
+#screens{flex:1;overflow:hidden;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:16px 16px calc(var(--tab-h) + 16px);opacity:0;pointer-events:none;transition:opacity .3s ease;-webkit-overflow-scrolling:touch}
+.screen.active{opacity:1;pointer-events:all}
+
+/* BG */
+.bg-art{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-art::before{content:'';position:absolute;top:-20%;right:-15%;width:70vw;height:70vw;background:radial-gradient(circle,rgba(201,168,76,.06) 0%,transparent 70%);border-radius:50%}
+.bg-art::after{content:'';position:absolute;bottom:10%;left:-20%;width:60vw;height:60vw;background:radial-gradient(circle,rgba(192,57,43,.05) 0%,transparent 70%);border-radius:50%}
+.torii-bg{position:fixed;bottom:var(--tab-h);right:-10px;z-index:0;opacity:.04;pointer-events:none;width:200px}
+
+/* TABS */
+#tabs{height:var(--tab-h);background:rgba(15,7,32,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom);position:relative;z-index:30;flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;border:none;background:none;color:var(--text-dim);font-size:10px;font-family:'Noto Sans JP',sans-serif;transition:color .25s;padding:8px 4px}
+.tab.active{color:var(--gold)}
+.tab-icon{font-size:22px;line-height:1;transition:transform .2s}
+.tab.active .tab-icon{transform:scale(1.15)}
+.tab-indicator{position:absolute;top:0;height:2px;background:var(--gold);border-radius:0 0 2px 2px;transition:left .3s cubic-bezier(.4,0,.2,1),width .3s}
+.tab-icon-wrap{position:relative;display:inline-block}
+.badge{display:inline-flex;align-items:center;justify-content:center;background:var(--vermillion);color:#fff;border-radius:10px;min-width:18px;height:18px;font-size:10px;padding:0 5px;position:absolute;top:-5px;right:-5px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.5),transparent)}
+.card-tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card-tag::before{content:'';width:16px;height:1px;background:var(--gold)}
+.card h3{font-family:'Noto Serif JP',serif;font-size:15px;line-height:1.55;color:var(--text);margin-bottom:8px}
+.card p{font-size:13px;color:var(--text-dim);line-height:1.7}
+.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
+.card-source{font-size:11px;color:var(--text-dim)}
+.card-btn{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
+.card-btn:active{background:rgba(201,168,76,.22)}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;margin-top:8px}
+.section-header h2{font-family:'DM Serif Display',serif;font-size:18px;color:var(--gold-light)}
+.section-header .divider{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+/* CHAT */
+#chat-messages{display:flex;flex-direction:column;gap:12px;min-height:100%}
+.msg{max-width:85%;display:flex;flex-direction:column;gap:4px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.ai{align-self:flex-start}.msg.user{align-self:flex-end}
+.msg-bubble{padding:12px 15px;border-radius:18px;font-size:14px;line-height:1.65}
+.msg.ai .msg-bubble{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text)}
+.msg.user .msg-bubble{background:linear-gradient(135deg,#8b1a1a,var(--vermillion));border-bottom-right-radius:4px;color:#fff}
+.msg-label{font-size:11px;color:var(--text-dim);padding:0 4px}
+.msg.user .msg-label{text-align:right}
+.msg-actions{display:flex;gap:6px;margin-top:4px}
+.msg-play-btn{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.25);color:var(--gold);padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px}
+
+/* CORRECTION */
+.correction{background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.35);border-radius:12px;padding:10px 13px;font-size:13px;margin-top:6px;color:var(--text);line-height:1.6}
+.corr-label{font-size:10px;letter-spacing:.1em;color:#f87171;font-weight:600;margin-bottom:4px}
+.corr-wrong{color:#fca5a5;text-decoration:line-through;text-decoration-color:rgba(248,113,113,.5)}
+.corr-arrow{color:var(--text-dim);margin:0 6px}
+.corr-right{color:#86efac;font-weight:500}
+.corr-reason{font-size:12px;color:var(--text-dim);margin-top:4px}
+
+/* SUGGESTION */
+.suggestion{background:rgba(74,103,65,.12);border:1px solid rgba(74,103,65,.3);border-radius:12px;padding:10px 13px;font-size:13px;margin-top:6px;color:var(--text)}
+.sug-label{font-size:10px;letter-spacing:.1em;color:#86c57a;font-weight:600;margin-bottom:6px}
+.sug-phrase{display:inline-block;background:rgba(74,103,65,.2);border:1px solid rgba(74,103,65,.3);border-radius:8px;padding:4px 10px;margin:3px;font-size:13px;cursor:pointer;color:#c8f0c0;font-family:'Noto Serif JP',serif}
+.sug-phrase:active{background:rgba(74,103,65,.4)}
+
+/* VOCAB BLOCK */
+.vocab-block{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:10px 12px;font-size:12px;margin-top:6px}
+.vocab-item{display:flex;gap:8px;padding:3px 0}
+.vocab-jp{color:var(--gold-light);min-width:80px;font-family:'Noto Serif JP',serif}
+.vocab-def{color:var(--text-dim)}
+
+/* CHAT INPUT */
+#chat-input-area{position:fixed;bottom:var(--tab-h);left:0;right:0;background:rgba(15,7,32,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:25;display:none;gap:10px;align-items:flex-end}
+#chat-input-area.visible{display:flex}
+#chat-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:10px 16px;color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:14px;resize:none;min-height:44px;max-height:120px;outline:none;line-height:1.5}
+#chat-input::placeholder{color:var(--text-dim)}
+#mic-btn,#send-btn{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;font-size:18px;transition:all .2s;flex-shrink:0}
+#mic-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+#mic-btn.recording{background:var(--vermillion);color:#fff;box-shadow:0 0 20px rgba(192,57,43,.6);animation:pulse-rec 1s ease-in-out infinite}
+@keyframes pulse-rec{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#send-btn{background:linear-gradient(135deg,#8b1a1a,var(--vermillion));color:#fff;box-shadow:0 4px 12px rgba(192,57,43,.35)}
+#send-btn:active{transform:scale(.92)}
+
+/* ══════════════════════════════
+   VOICE OVERLAY
+══════════════════════════════ */
+#voice-overlay{
+  position:fixed;inset:0;z-index:100;
+  background:radial-gradient(ellipse at 50% 30%, #2a0a3e 0%, #0f0720 100%);
+  display:none;flex-direction:column;align-items:center;
+  justify-content:flex-start;padding:60px 24px 30px;
+  overflow:hidden;
+}
+#voice-overlay.open{display:flex}
+
+/* top close */
+.voice-close-btn{position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:18px;display:grid;place-items:center;cursor:pointer;z-index:2}
+
+/* avatar ring */
+.voice-avatar{position:relative;margin-bottom:18px;flex-shrink:0}
+.avatar-core{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--gold-light),var(--gold));display:grid;place-items:center;font-size:42px;box-shadow:0 0 40px rgba(201,168,76,.35);position:relative;z-index:2}
+.ring{position:absolute;border-radius:50%;border:2px solid rgba(201,168,76,.2);animation:ring-idle 3s ease-in-out infinite}
+.ring1{inset:-10px;animation-delay:0s}
+.ring2{inset:-22px;border-color:rgba(201,168,76,.1);animation-delay:.5s}
+@keyframes ring-idle{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.04);opacity:1}}
+
+#voice-overlay.listening .ring{border-color:rgba(192,57,43,.5);animation:ring-listen .5s ease-in-out infinite}
+@keyframes ring-listen{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+#voice-overlay.speaking .ring{border-color:rgba(201,168,76,.7);animation:ring-speak .7s ease-in-out infinite}
+@keyframes ring-speak{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#voice-overlay.processing .ring{border-color:rgba(139,155,180,.4);animation:ring-proc 1.5s linear infinite}
+@keyframes ring-proc{to{transform:rotate(360deg)}}
+
+/* status */
+#voice-status-label{font-size:13px;color:var(--text-dim);letter-spacing:.06em;margin-bottom:16px;text-align:center;min-height:20px}
+#voice-overlay.listening #voice-status-label{color:#fca5a5}
+#voice-overlay.speaking #voice-status-label{color:var(--gold-light)}
+#voice-overlay.processing #voice-status-label{color:var(--mist,#8b9bb4)}
+
+/* WAVEFORM */
+#waveform{display:flex;align-items:center;justify-content:center;gap:4px;height:56px;margin-bottom:14px;width:100%;max-width:340px}
+.wave-bar{width:4px;border-radius:4px;background:var(--border);transition:height .1s ease,background .3s}
+#voice-overlay.listening .wave-bar{background:var(--vermillion)}
+#voice-overlay.speaking .wave-bar{background:var(--gold)}
+#voice-overlay.processing .wave-bar{background:#8b9bb4}
+
+/* LIVE TRANSCRIPT */
+#live-transcript{width:100%;max-width:380px;min-height:64px;background:rgba(36,21,53,.8);border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:15px;line-height:1.65;color:var(--text);text-align:center;margin-bottom:12px;font-family:'Noto Serif JP',serif;flex-shrink:0}
+.interim{color:var(--text-dim)}
+
+/* VOICE CARDS */
+#voice-cards{width:100%;max-width:380px;overflow-y:auto;flex:1;min-height:0}
+.voice-card{border-radius:14px;padding:12px 14px;margin-bottom:8px;font-size:13px;line-height:1.6;animation:fadeUp .3s ease}
+.voice-card.corr{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4)}
+.voice-card.sug{background:rgba(74,103,65,.15);border:1px solid rgba(74,103,65,.4)}
+.vc-label{font-size:10px;font-weight:600;letter-spacing:.1em;margin-bottom:5px}
+.voice-card.corr .vc-label{color:#fca5a5}
+.voice-card.sug .vc-label{color:#86c57a}
+
+/* CONTROLS */
+.voice-controls{display:flex;gap:20px;align-items:center;margin-top:10px;flex-shrink:0}
+#voice-main-btn{width:74px;height:74px;border-radius:50%;border:none;cursor:pointer;font-size:30px;display:grid;place-items:center;transition:all .25s;flex-shrink:0;color:#fff}
+.voice-side-btn{width:50px;height:50px;border-radius:50%;border:none;cursor:pointer;font-size:20px;display:grid;place-items:center;background:var(--surface2);border:1px solid var(--border);color:var(--text);transition:all .2s;flex-shrink:0}
+.voice-side-btn:active{transform:scale(.9)}
+
+#voice-main-btn.idle{background:linear-gradient(135deg,#8b1a1a,var(--vermillion));box-shadow:0 6px 24px rgba(192,57,43,.45)}
+#voice-main-btn.listening{background:var(--vermillion);animation:sonar 1.2s ease-out infinite}
+@keyframes sonar{0%{box-shadow:0 0 0 0 rgba(192,57,43,.6)}70%{box-shadow:0 0 0 24px rgba(192,57,43,0)}100%{box-shadow:0 0 0 0 rgba(192,57,43,0)}}
+#voice-main-btn.speaking{background:linear-gradient(135deg,#5c3a00,#a07020);box-shadow:0 0 30px rgba(201,168,76,.5);animation:none}
+#voice-main-btn.processing{background:var(--surface2);border:2px solid var(--border);color:var(--text-dim);animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.voice-hint{font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center;flex-shrink:0}
+
+/* HOME */
+.greeting-card{background:linear-gradient(135deg,#2e1d45,#1a0a2e);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
+.greeting-card::after{content:'⛩';position:absolute;right:14px;bottom:10px;font-size:56px;opacity:.08}
+.greeting-card h2{font-family:'DM Serif Display',serif;font-size:22px;color:var(--gold-light);margin-bottom:6px}
+.greeting-card p{font-size:13px;color:var(--text-dim);line-height:1.65}
+.greeting-time{font-size:11px;color:var(--gold);margin-bottom:8px;letter-spacing:.05em}
+
+/* VOICE ENTRY BUTTON */
+.voice-entry-btn{width:100%;background:linear-gradient(135deg,rgba(192,57,43,.18),rgba(139,26,26,.25));border:1px solid rgba(192,57,43,.4);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:12px;transition:all .2s;position:relative;overflow:hidden}
+.voice-entry-btn:active{transform:scale(.98)}
+.veb-icon{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#8b1a1a,var(--vermillion));display:grid;place-items:center;font-size:24px;flex-shrink:0;box-shadow:0 0 20px rgba(192,57,43,.4)}
+.veb-text h3{font-family:'DM Serif Display',serif;font-size:17px;color:var(--text);margin-bottom:3px}
+.veb-text p{font-size:12px;color:var(--text-dim)}
+.veb-pulse{position:absolute;right:18px;display:flex;gap:3px;align-items:center;height:24px}
+.veb-dot{width:4px;background:var(--vermillion);border-radius:4px;animation:vdot 1.2s ease-in-out infinite}
+.veb-dot:nth-child(1){height:8px;animation-delay:0s}
+.veb-dot:nth-child(2){height:18px;animation-delay:.15s}
+.veb-dot:nth-child(3){height:12px;animation-delay:.3s}
+.veb-dot:nth-child(4){height:22px;animation-delay:.45s}
+.veb-dot:nth-child(5){height:8px;animation-delay:.6s}
+@keyframes vdot{0%,100%{opacity:.3}50%{opacity:1;transform:scaleY(1.4)}}
+
+/* NEWS */
+.news-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.25);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--gold);margin:3px;cursor:pointer;transition:all .2s}
+.news-chip.active{background:rgba(201,168,76,.25);border-color:var(--gold)}
+.chip-row{display:flex;flex-wrap:wrap;margin-bottom:14px}
+
+/* EVENTS */
+.event-card{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.event-date{background:var(--vermillion);border-radius:10px;padding:8px 10px;text-align:center;flex-shrink:0;min-width:46px}
+.event-date .month{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.75)}
+.event-date .day{font-size:22px;font-family:'DM Serif Display',serif;color:#fff;line-height:1.1}
+.event-info h4{font-family:'Noto Serif JP',serif;font-size:14px;margin-bottom:5px;color:var(--text)}
+.event-info p{font-size:12px;color:var(--text-dim);line-height:1.6}
+.event-tag{display:inline-block;background:rgba(74,103,65,.25);border:1px solid rgba(74,103,65,.4);color:#86c57a;border-radius:10px;padding:2px 8px;font-size:10px;margin-top:6px}
+
+/* VOCAB SCREEN */
+.vocab-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
+.vocab-level{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:11px;font-weight:600;flex-shrink:0}
+.level-n1{background:rgba(192,57,43,.2);color:#f87171;border:1px solid rgba(192,57,43,.3)}
+.level-n2{background:rgba(201,168,76,.15);color:var(--gold-light);border:1px solid var(--border)}
+.vocab-content{flex:1}
+.vocab-jp-main{font-family:'Noto Serif JP',serif;font-size:17px;color:var(--text)}
+.vocab-reading{font-size:11px;color:var(--text-dim);margin:1px 0}
+.vocab-zh{font-size:13px;color:#8b9bb4}
+
+/* THINKING */
+.thinking{display:flex;gap:5px;padding:12px 14px;align-items:center}
+.thinking span{width:7px;height:7px;border-radius:50%;background:var(--gold);opacity:.6;animation:think 1.2s ease-in-out infinite}
+.thinking span:nth-child(2){animation-delay:.2s}.thinking span:nth-child(3){animation-delay:.4s}
+@keyframes think{0%,80%,100%{transform:scale(1);opacity:.4}40%{transform:scale(1.3);opacity:1}}
+
+/* ── PERMISSION MODAL ── */
+#perm-modal{position:fixed;inset:0;z-index:200;background:rgba(10,4,22,.92);display:none;align-items:center;justify-content:center;padding:24px}
+#perm-modal.open{display:flex}
+.perm-box{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;max-width:360px;width:100%;text-align:center;position:relative}
+.perm-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.5),transparent);border-radius:22px 22px 0 0}
+.perm-icon{font-size:48px;margin-bottom:14px}
+.perm-box h3{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gold-light);margin-bottom:10px}
+.perm-box p{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:18px}
+.perm-steps{background:rgba(0,0,0,.25);border-radius:12px;padding:14px 16px;margin-bottom:18px;text-align:left}
+.perm-steps li{font-size:13px;color:var(--text);line-height:1.8;list-style:none;padding-left:20px;position:relative}
+.perm-steps li::before{content:'→';position:absolute;left:0;color:var(--gold);font-size:12px}
+.perm-btn{width:100%;padding:13px;border-radius:14px;border:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:500;transition:all .2s;margin-bottom:8px}
+.perm-btn.primary{background:linear-gradient(135deg,#8b1a1a,var(--vermillion));color:#fff;box-shadow:0 4px 14px rgba(192,57,43,.35)}
+.perm-btn.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim)}
+.perm-btn:active{transform:scale(.97)}
+
+/* ── HTTPS BANNER ── */
+#https-banner{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.6}
+#https-banner strong{color:#fca5a5;display:block;margin-bottom:3px}
+#https-banner a{color:var(--gold);text-decoration:underline}
+
+/* ── VOICE FALLBACK TEXT INPUT ── */
+#voice-text-fallback{width:100%;max-width:380px;display:none;gap:8px;margin-top:8px;flex-shrink:0}
+#voice-text-fallback.show{display:flex}
+#vtf-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:10px 14px;color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;outline:none}
+#vtf-input::placeholder{color:var(--text-dim);font-family:'Noto Sans JP',sans-serif}
+#vtf-send{width:42px;height:42px;border-radius:50%;border:none;background:linear-gradient(135deg,#8b1a1a,var(--vermillion));color:#fff;font-size:16px;cursor:pointer;flex-shrink:0}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="bg-art"></div>
+<svg class="torii-bg" viewBox="0 0 200 220" fill="currentColor" style="color:#c9a84c">
+  <rect x="10" y="40" width="180" height="14" rx="7"/>
+  <rect x="20" y="20" width="160" height="10" rx="5"/>
+  <rect x="25" y="30" width="12" height="20" rx="3"/>
+  <rect x="163" y="30" width="12" height="20" rx="3"/>
+  <rect x="30" y="54" width="10" height="166" rx="5"/>
+  <rect x="160" y="54" width="10" height="166" rx="5"/>
+</svg>
+
+<!-- ══════ PERMISSION MODAL ══════ -->
+<div id="perm-modal">
+  <div class="perm-box">
+    <div class="perm-icon" id="perm-icon">🎙</div>
+    <h3 id="perm-title">マイクの許可が必要です</h3>
+    <p id="perm-desc">音声会話機能を使うには、ブラウザのマイク許可が必要です。</p>
+    <ul class="perm-steps" id="perm-steps">
+      <li>下の「許可する」ボタンをタップ</li>
+      <li>ブラウザのポップアップで「許可」を選択</li>
+      <li>許可後、自動で会話モードが開始します</li>
+    </ul>
+    <button class="perm-btn primary" id="perm-action-btn" onclick="requestMicPermission()">マイクを許可する 🎙</button>
+    <button class="perm-btn secondary" onclick="closePerm();openVoiceFallback()">テキストで入力する 💬</button>
+  </div>
+</div>
+
+<!-- ══════ VOICE OVERLAY ══════ -->
+<div id="voice-overlay">
+  <button class="voice-close-btn" onclick="closeVoiceMode()">✕</button>
+
+  <div class="voice-avatar">
+    <div class="avatar-core">⛩</div>
+    <div class="ring ring1"></div>
+    <div class="ring ring2"></div>
+  </div>
+
+  <div id="voice-status-label">タップして話しかけてください</div>
+
+  <div id="waveform">
+    <div class="wave-bar" id="wb0"></div><div class="wave-bar" id="wb1"></div>
+    <div class="wave-bar" id="wb2"></div><div class="wave-bar" id="wb3"></div>
+    <div class="wave-bar" id="wb4"></div><div class="wave-bar" id="wb5"></div>
+    <div class="wave-bar" id="wb6"></div><div class="wave-bar" id="wb7"></div>
+    <div class="wave-bar" id="wb8"></div><div class="wave-bar" id="wb9"></div>
+    <div class="wave-bar" id="wb10"></div><div class="wave-bar" id="wb11"></div>
+    <div class="wave-bar" id="wb12"></div><div class="wave-bar" id="wb13"></div>
+    <div class="wave-bar" id="wb14"></div>
+  </div>
+
+  <div id="live-transcript">
+    <span id="tf"></span><span class="interim" id="ti"></span>
+  </div>
+
+  <div id="voice-cards"></div>
+
+  <div class="voice-controls">
+    <button class="voice-side-btn" id="tts-btn" onclick="toggleTTS()" title="音声ON/OFF">🔊</button>
+    <button id="voice-main-btn" class="idle" onclick="toggleListen()">🎙</button>
+    <button class="voice-side-btn" onclick="voiceToChat()" title="テキストへ">💬</button>
+  </div>
+  <div class="voice-hint">ボタンを押して話す ｜ もう一度押すと停止</div>
+
+  <!-- fallback text input when mic unavailable -->
+  <div id="voice-text-fallback">
+    <input id="vtf-input" type="text" placeholder="テキストで入力…" onkeydown="if(event.key==='Enter')sendVoiceText()">
+    <button id="vtf-send" onclick="sendVoiceText()">→</button>
+  </div>
+</div>
+
+<!-- ══════ MAIN APP ══════ -->
+<div id="app">
+  <div id="header">
+    <div class="header-mon">⛩</div>
+    <div class="header-title">京都先生<span>Kyoto AI Language Sensei</span></div>
+    <div id="status-dot"></div>
+  </div>
+
+  <div id="screens">
+
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="greeting-card">
+        <div class="greeting-time" id="greeting-time">おはようございます ☀️</div>
+        <h2>今日も練習しましょう</h2>
+        <p>時事ニュース＋京都イベント。文法に気をつけながら話しましょう！</p>
+      </div>
+
+      <div id="https-banner">
+        <strong>⚠️ マイク機能を使うにはHTTPS環境が必要です</strong>
+        このファイルをローカルで開いている場合、音声機能は使えません。
+        <a href="https://gist.github.com" target="_blank">GitHub Pages</a> などに置くか、テキスト入力をご利用ください。
+      </div>
+
+      <button class="voice-entry-btn" onclick="handleVoiceEntry()">
+        <div class="veb-icon">🎙</div>
+        <div class="veb-text">
+          <h3>音声会話モード</h3>
+          <p>話すだけで即時添削・語句提案・TTS</p>
+        </div>
+        <div class="veb-pulse">
+          <div class="veb-dot"></div><div class="veb-dot"></div>
+          <div class="veb-dot"></div><div class="veb-dot"></div><div class="veb-dot"></div>
+        </div>
+      </button>
+
+      <div class="section-header"><h2>今日のニュース</h2><div class="divider"></div></div>
+      <div class="card">
+        <div class="card-tag">Fashion ✦ 産経新聞</div>
+        <h3>京都のデザイナーが東京コレクションで伝統柄をモダンに再解釈</h3>
+        <p>西陣織のテキスタイルを使った新作コレクションが注目を集めています。</p>
+        <div class="card-footer"><span class="card-source">2026.04.03</span><button class="card-btn" onclick="openChatWithTopic('京都のファッションデザイナー')">話し合う →</button></div>
+      </div>
+      <div class="card">
+        <div class="card-tag">Trending ✦ 日経新聞</div>
+        <h3>インバウンド需要の回復で京都の旅館業が過去最高の予約数を記録</h3>
+        <p>外国人観光客の増加に伴い、町家改装の宿泊施設も急増しています。</p>
+        <div class="card-footer"><span class="card-source">2026.04.03</span><button class="card-btn" onclick="openChatWithTopic('京都の観光と旅館業')">話し合う →</button></div>
+      </div>
+      <div class="card">
+        <div class="card-tag">京都イベント ✦ 芸術</div>
+        <h3>京都市美術館「現代日本画展」— 4月12日まで開催</h3>
+        <p>若手日本画家12名による特別展。伝統技法と現代感性の融合作品。</p>
+        <div class="card-footer"><span class="card-source">京都市美術館</span><button class="card-btn" onclick="openChatWithTopic('京都市美術館の日本画展')">話し合う →</button></div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="screen" id="screen-chat">
+      <div id="chat-messages">
+        <div class="msg ai">
+          <div class="msg-label">京都先生</div>
+          <div class="msg-bubble">こんにちは！今日もご一緒に日本語を練習しましょう。<br><br>今日は産経新聞で面白いニュースがありました。京都のデザイナーが西陣織を使って東京コレクションに挑戦したそうです。このニュースについてどう思いますか？</div>
+          <div class="msg-actions"><button class="msg-play-btn" onclick="speakText(this,'こんにちは！今日もご一緒に日本語を練習しましょう。今日は産経新聞で面白いニュースがありました。京都のデザイナーが西陣織を使って東京コレクションに挑戦したそうです。このニュースについてどう思いますか？')">▶ 再生</button></div>
+          <div class="vocab-block">
+            <div class="vocab-item"><span class="vocab-jp">西陣織</span><span class="vocab-def">にしじんおり｜京都の伝統的な織物</span></div>
+            <div class="vocab-item"><span class="vocab-jp">挑戦する</span><span class="vocab-def">ちょうせんする｜to challenge</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="screen" id="screen-news">
+      <div class="chip-row">
+        <div class="news-chip active" onclick="filterNews(this,'all')">🗾 すべて</div>
+        <div class="news-chip" onclick="filterNews(this,'fashion')">👗 ファッション</div>
+        <div class="news-chip" onclick="filterNews(this,'trend')">🔥 トレンド</div>
+        <div class="news-chip" onclick="filterNews(this,'kyoto')">⛩ 京都</div>
+      </div>
+      <div data-cat="fashion"><div class="card"><div class="card-tag">Fashion ✦ 産経新聞</div><h3>京都・西陣織がパリのモード界で再評価される動き</h3><p>フランスの有名メゾンが西陣織との協業を発表。職人の高齢化という課題も議論されています。</p><div class="card-footer"><span class="card-source">産経 2026.04.03</span><button class="card-btn" onclick="openChatWithTopic('西陣織とパリモード')">練習する</button></div></div></div>
+      <div data-cat="fashion"><div class="card"><div class="card-tag">Fashion ✦ 日経新聞</div><h3>サステナブルファッション、京都の若手デザイナーが牽引</h3><p>廃棄着物を再利用したアップサイクルブランドが環境意識の高い消費者に支持されています。</p><div class="card-footer"><span class="card-source">日経 2026.04.03</span><button class="card-btn" onclick="openChatWithTopic('サステナブルファッション')">練習する</button></div></div></div>
+      <div data-cat="trend"><div class="card"><div class="card-tag">Trending ✦ 日経新聞</div><h3>Z世代の「リアル体験」志向が加速、京都への修学旅行が復活傾向</h3><p>デジタル疲れを感じる若者が伝統文化や自然体験を求める傾向が強まっています。</p><div class="card-footer"><span class="card-source">日経 2026.04.03</span><button class="card-btn" onclick="openChatWithTopic('Z世代のトレンド')">練習する</button></div></div></div>
+      <div data-cat="kyoto"><div class="card"><div class="card-tag">京都 ✦ 芸文</div><h3>南座「歌舞伎特別公演」— 4月5日〜20日</h3><p>人間国宝による特別出演あり。英語字幕付きの回も用意されています。</p><div class="card-footer"><span class="card-source">南座公式</span><button class="card-btn" onclick="openChatWithTopic('南座の歌舞伎')">練習する</button></div></div></div>
+      <div data-cat="kyoto"><div class="card"><div class="card-tag">京都 ✦ 展覧会</div><h3>京都国立博物館「茶の湯と禅の美」特別展</h3><p>茶道具から禅寺の美術まで約200点を展示。台湾からの貸し出し品も含む国際的な構成。</p><div class="card-footer"><span class="card-source">京博 〜5/11</span><button class="card-btn" onclick="openChatWithTopic('茶道と禅の文化')">練習する</button></div></div></div>
+    </div>
+
+    <!-- EVENTS -->
+    <div class="screen" id="screen-events">
+      <div class="section-header"><h2>京都の芸文活動</h2><div class="divider"></div></div>
+      <div class="event-card"><div class="event-date"><div class="month">APR</div><div class="day">5</div></div><div class="event-info"><h4>南座 歌舞伎特別公演</h4><p>四条大橋東詰｜14:00〜 / 18:00〜 英語字幕あり</p><span class="event-tag">伝統芸能</span></div></div>
+      <div class="event-card"><div class="event-date"><div class="month">APR</div><div class="day">7</div></div><div class="event-info"><h4>京都府立植物園 チューリップ展</h4><p>左京区下鴨半木町｜9:00〜17:00</p><span class="event-tag">自然・季節</span></div></div>
+      <div class="event-card"><div class="event-date"><div class="month">APR</div><div class="day">12</div></div><div class="event-info"><h4>京都市美術館「現代日本画展」最終日</h4><p>岡崎公園内｜9:00〜17:00</p><span class="event-tag">美術展</span></div></div>
+      <div class="event-card"><div class="event-date"><div class="month">APR</div><div class="day">13</div></div><div class="event-info"><h4>嵐山 花灯路ナイトイベント</h4><p>嵐山一帯｜18:00〜21:30</p><span class="event-tag">観光</span></div></div>
+      <div class="event-card"><div class="event-date"><div class="month">APR</div><div class="day">19</div></div><div class="event-info"><h4>京都国立近代美術館「工芸の現在」展 開幕</h4><p>岡崎公園内｜10:00〜18:00</p><span class="event-tag">工芸・デザイン</span></div></div>
+      <div class="event-card"><div class="event-date"><div class="month">MAY</div><div class="day">11</div></div><div class="event-info"><h4>京都国立博物館「茶の湯と禅」最終日</h4><p>東山区茶屋町｜9:30〜18:00</p><span class="event-tag">茶道・禅</span></div></div>
+    </div>
+
+    <!-- VOCAB -->
+    <div class="screen" id="screen-vocab">
+      <div class="section-header"><h2>語彙ノート</h2><div class="divider"></div></div>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px">対話中に出てきたN1/N2レベルの単語</p>
+      <div id="vocab-list">
+        <div class="vocab-card"><div class="vocab-level level-n1">N1</div><div class="vocab-content"><div class="vocab-jp-main">牽引（けんいん）</div><div class="vocab-reading">けんいん</div><div class="vocab-zh">引領・帶動</div></div></div>
+        <div class="vocab-card"><div class="vocab-level level-n2">N2</div><div class="vocab-content"><div class="vocab-jp-main">再解釈（さいかいしゃく）</div><div class="vocab-reading">さいかいしゃく</div><div class="vocab-zh">重新詮釋</div></div></div>
+        <div class="vocab-card"><div class="vocab-level level-n2">N2</div><div class="vocab-content"><div class="vocab-jp-main">融合（ゆうごう）</div><div class="vocab-reading">ゆうごう</div><div class="vocab-zh">融合・結合</div></div></div>
+        <div class="vocab-card"><div class="vocab-level level-n1">N1</div><div class="vocab-content"><div class="vocab-jp-main">高齢化（こうれいか）</div><div class="vocab-reading">こうれいか</div><div class="vocab-zh">高齡化</div></div></div>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <div id="tabs">
+    <div class="tab-indicator" id="tab-indicator"></div>
+    <button class="tab active" data-screen="home" onclick="switchTab(this)"><div class="tab-icon-wrap"><span class="tab-icon">🏠</span></div><span>ホーム</span></button>
+    <button class="tab" data-screen="chat" onclick="switchTab(this)"><div class="tab-icon-wrap"><span class="tab-icon">💬</span><span class="badge" id="chat-badge" style="display:none">1</span></div><span>会話</span></button>
+    <button class="tab" data-screen="news" onclick="switchTab(this)"><div class="tab-icon-wrap"><span class="tab-icon">📰</span></div><span>ニュース</span></button>
+    <button class="tab" data-screen="events" onclick="switchTab(this)"><div class="tab-icon-wrap"><span class="tab-icon">⛩</span></div><span>イベント</span></button>
+    <button class="tab" data-screen="vocab" onclick="switchTab(this)"><div class="tab-icon-wrap"><span class="tab-icon">📖</span></div><span>語彙</span></button>
+  </div>
+</div>
+
+<!-- CHAT INPUT BAR -->
+<div id="chat-input-area">
+  <button id="mic-btn" onclick="toggleChatMic()">🎙</button>
+  <textarea id="chat-input" rows="1" placeholder="日本語で入力してください…" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+  <button id="send-btn" onclick="sendChatMessage()">→</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+/* ── SYSTEM PROMPT ── */
+const SYSTEM_PROMPT=`あなたは京都に深く精通したAI日本語顧問「京都先生」です。
+
+【役割】高品質な日本語会話練習パートナー。即時文法・助詞の修正、語句提案、京都文化・時事を軸とした会話誘導。
+
+【絶対ルール】返答は必ず以下のJSONのみで返すこと。Markdownコードブロックや他のテキストは一切含めないこと：
+{"reply":"通常の返答文（です/ます体・200字以内）","corrections":[{"wrong":"誤り箇所","right":"正しい形","reason":"理由"}],"suggestions":["提案フレーズ1","提案フレーズ2","提案フレーズ3"],"vocab":[{"jp":"単語（読み）","level":"N1","zh":"繁体字翻訳"}]}
+
+correctionsは空配列可。suggestionsは必ず3つ。vocabはN1/N2語彙のみ、なければ空配列。
+
+【会話ルール】
+- 常にです/ます体（丁寧語）
+- 文法・助詞誤用は必ずcorrectionsに記載
+- N1/N2語彙はvocabに記載
+- 返答の最後に必ず質問か話題提供
+
+【話題優先順位】
+1. 京都府の芸文活動・展覧会・伝統文化
+2. Fashion（ファッション）のニュース
+3. Trending（日本・台湾の流行トレンド）
+4. 産経・日経・中央社の時事（親中・共産党寄り観点は排除）`;
+
+/* ── STATE ── */
+let currentTab='home';
+let chatHistory=[];
+let ttsEnabled=true;
+let voiceState='idle'; // idle|listening|processing|speaking
+let waveAnim=null;
+let recognition=null;
+let chatMicActive=false;
+let chatRec=null;
+const savedVocabSet=new Set();
+
+/* ── INIT ── */
+(function(){
+  const h=new Date().getHours();
+  const el=document.getElementById('greeting-time');
+  el.textContent=h<11?'おはようございます ☀️':h<17?'こんにちは 🌸':'こんばんは 🌙';
+  if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
+  // Show https warning banner if running from file:// or non-https
+  const isSecure=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  if(!isSecure){
+    const banner=document.getElementById('https-banner');
+    if(banner) banner.style.display='block';
+  }
+})();
+
+/* ── TAB ── */
+function switchTab(btn){
+  const scr=btn.dataset.screen;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('screen-'+scr).classList.add('active');
+  currentTab=scr;
+  const ia=document.getElementById('chat-input-area');
+  if(scr==='chat'){ia.classList.add('visible');document.getElementById('chat-badge').style.display='none';scrollChatBottom();}
+  else ia.classList.remove('visible');
+  updateIndicator(btn);
+}
+function updateIndicator(btn){
+  const ind=document.getElementById('tab-indicator');
+  const tr=btn.getBoundingClientRect();
+  const tabsr=document.getElementById('tabs').getBoundingClientRect();
+  ind.style.left=(tr.left-tabsr.left+10)+'px';
+  ind.style.width=(tr.width-20)+'px';
+}
+setTimeout(()=>{const a=document.querySelector('.tab.active');if(a)updateIndicator(a);},120);
+
+function openChatWithTopic(topic){
+  switchTab(document.querySelector('[data-screen="chat"]'));
+  const inp=document.getElementById('chat-input');
+  inp.value=topic+'について話し合いたいです。';
+  autoResize(inp);inp.focus();
+}
+function filterNews(chip,cat){
+  document.querySelectorAll('.news-chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  document.querySelectorAll('#screen-news [data-cat]').forEach(el=>{
+    el.style.display=(cat==='all'||el.dataset.cat===cat)?'':'none';
+  });
+}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}
+
+/* ── CLAUDE API ── */
+async function callClaude(text){
+  // Push user message; will pop on catastrophic failure to keep history clean
+  chatHistory.push({role:'user',content:text});
+  let data;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:SYSTEM_PROMPT,
+        messages:chatHistory
+      })
+    });
+    data=await resp.json();
+  }catch(netErr){
+    // Network failure — remove the user message we just pushed so history stays consistent
+    chatHistory.pop();
+    throw netErr;
+  }
+  const raw=(data.content||[]).map(b=>b.text||'').join('');
+  let parsed;
+  try{
+    const clean=raw.replace(/```json|```/g,'').trim();
+    parsed=JSON.parse(clean);
+  }catch(e){
+    parsed={reply:raw||'もう一度お願いします。',corrections:[],suggestions:['もう一度お願いします','続けてください','例を教えてください'],vocab:[]};
+  }
+  chatHistory.push({role:'assistant',content:JSON.stringify(parsed)});
+  return parsed;
+}
+
+/* ── TTS ── */
+function speakText(btnEl,text){
+  if(!window.speechSynthesis){if(btnEl)btnEl.textContent='▶ 再生';return;}
+  window.speechSynthesis.cancel();
+  if(!ttsEnabled){return;}
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang='ja-JP';utt.rate=0.88;utt.pitch=1.05;
+  const voices=window.speechSynthesis.getVoices();
+  const jaV=voices.find(v=>v.lang.startsWith('ja'));
+  if(jaV)utt.voice=jaV;
+  if(btnEl){
+    btnEl.textContent='⏹ 停止';
+    utt.onend=utt.onerror=()=>{btnEl.textContent='▶ 再生';};
+  }
+  window.speechSynthesis.speak(utt);
+}
+function speakReply(text,onEnd){
+  if(!window.speechSynthesis){if(onEnd)onEnd();return;}
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang='ja-JP';utt.rate=0.88;utt.pitch=1.05;
+  const voices=window.speechSynthesis.getVoices();
+  const jaV=voices.find(v=>v.lang.startsWith('ja'));
+  if(jaV)utt.voice=jaV;
+  utt.onend=utt.onerror=onEnd||null;
+  window.speechSynthesis.speak(utt);
+}
+function toggleTTS(){
+  ttsEnabled=!ttsEnabled;
+  document.getElementById('tts-btn').textContent=ttsEnabled?'🔊':'🔇';
+  if(!ttsEnabled&&window.speechSynthesis)window.speechSynthesis.cancel();
+}
+
+/* ── WAVEFORM ── */
+const WAVE_BASE=[10,20,32,14,42,24,12,38,18,28,10,22,36,16,26];
+function startWave(mode){
+  stopWave();
+  const bars=document.querySelectorAll('.wave-bar');
+  waveAnim=setInterval(()=>{
+    bars.forEach(b=>{
+      const h=mode==='listening'?4+Math.random()*50:
+              mode==='speaking'?8+Math.random()*38:
+              mode==='processing'?4+Math.random()*14:6;
+      b.style.height=h+'px';
+    });
+  },80);
+}
+function stopWave(){
+  clearInterval(waveAnim);waveAnim=null;
+  document.querySelectorAll('.wave-bar').forEach((b,i)=>b.style.height=(WAVE_BASE[i]||14)+'px');
+}
+
+/* ── VOICE OVERLAY STATE ── */
+function setVoiceUI(state){
+  voiceState=state;
+  const ov=document.getElementById('voice-overlay');
+  const mb=document.getElementById('voice-main-btn');
+  const lbl=document.getElementById('voice-status-label');
+  // Only update className if overlay is actually open — prevents accidentally reopening it
+  if(ov.classList.contains('open')){
+    ov.className='open'+(state!=='idle'?' '+state:'');
+  }
+  mb.className=state;
+  mb.style.transform='';
+  stopWave();
+  if(state==='idle'){lbl.textContent='タップして話しかけてください';mb.textContent='🎙';}
+  else if(state==='listening'){lbl.textContent='聞いています… 話してください';mb.textContent='⏹';startWave('listening');}
+  else if(state==='processing'){lbl.textContent='考えています…';mb.textContent='⏳';startWave('processing');}
+  else if(state==='speaking'){lbl.textContent='京都先生が話しています';mb.textContent='⏹';startWave('speaking');}
+}
+
+function openVoiceMode(){
+  document.getElementById('voice-overlay').classList.add('open');
+  document.getElementById('voice-cards').innerHTML='';
+  document.getElementById('tf').textContent='';
+  document.getElementById('ti').textContent='';
+  // Reset fallback text input state
+  document.getElementById('voice-text-fallback').classList.remove('show');
+  document.getElementById('voice-main-btn').style.opacity='';
+  document.getElementById('voice-main-btn').style.pointerEvents='';
+  setVoiceUI('idle');
+}
+function closeVoiceMode(){
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+  stopWave();
+  document.getElementById('voice-overlay').classList.remove('open');
+  voiceState='idle';
+}
+function voiceToChat(){
+  closeVoiceMode();
+  switchTab(document.querySelector('[data-screen="chat"]'));
+}
+
+/* ── MIC PERMISSION FLOW ── */
+let micPermState='unknown'; // unknown | granted | denied | unavailable
+
+async function checkMicPermission(){
+  // navigator.permissions API (Chrome Android supports this)
+  if(navigator.permissions){
+    try{
+      const result=await navigator.permissions.query({name:'microphone'});
+      micPermState=result.state; // granted | denied | prompt
+      result.onchange=()=>{ micPermState=result.state; };
+      return result.state;
+    }catch(e){}
+  }
+  return 'unknown';
+}
+
+async function handleVoiceEntry(){
+  const isSecure=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  const hasSR=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+
+  // No speech recognition support at all
+  if(!hasSR){
+    showPermModal(
+      '🚫','音声認識に対応していません',
+      'このブラウザは音声認識に対応していません。Chrome（最新版）をご利用ください。',
+      [],[],false
+    );
+    return;
+  }
+
+  // file:// or http — mic cannot work
+  if(!isSecure){
+    showPermModal(
+      '🔒','HTTPS環境が必要です',
+      '音声機能はセキュリティ上の理由から、HTTPS環境でのみ動作します。',
+      [
+        'ファイルをサーバーにアップロードする（GitHub Pages等）',
+        'または下の「テキストで入力」を使う',
+      ],
+      [],false
+    );
+    return;
+  }
+
+  // Check current permission state
+  const state=await checkMicPermission();
+
+  if(state==='granted'){
+    // Already have permission — go straight to voice mode
+    openVoiceMode();
+    return;
+  }
+
+  if(state==='denied'){
+    showPermModal(
+      '🚫','マイクがブロックされています',
+      'ブラウザの設定でマイクがブロックされています。以下の手順で許可してください。',
+      [
+        'Chromeのアドレスバー左の 🔒 アイコンをタップ',
+        '「サイトの設定」→「マイク」→「許可」に変更',
+        'ページをリロードしてからもう一度お試しください',
+      ],
+      [],false
+    );
+    return;
+  }
+
+  // state === 'prompt' or 'unknown' — show friendly modal then request
+  showPermModal(
+    '🎙','マイクの許可が必要です',
+    '音声で日本語を練習するために、マイクへのアクセスを許可してください。',
+    [
+      '「マイクを許可する」ボタンをタップ',
+      'ブラウザのポップアップで「許可」を選択',
+      '許可後、自動で会話が始まります',
+    ],
+    [],true
+  );
+}
+
+function showPermModal(icon,title,desc,steps,_unused,showAllow){
+  document.getElementById('perm-icon').textContent=icon;
+  document.getElementById('perm-title').textContent=title;
+  document.getElementById('perm-desc').textContent=desc;
+  const ul=document.getElementById('perm-steps');
+  ul.innerHTML=steps.map(s=>`<li>${s}</li>`).join('');
+  ul.style.display=steps.length?'block':'none';
+  const actionBtn=document.getElementById('perm-action-btn');
+  actionBtn.style.display=showAllow?'block':'none';
+  document.getElementById('perm-modal').classList.add('open');
+}
+
+function closePerm(){
+  document.getElementById('perm-modal').classList.remove('open');
+}
+
+async function requestMicPermission(){
+  closePerm();
+  try{
+    // Requesting getUserMedia is the only reliable cross-browser way to trigger the permission prompt
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    // Permission granted — stop the stream immediately (we only needed the permission)
+    stream.getTracks().forEach(t=>t.stop());
+    micPermState='granted';
+    openVoiceMode();
+  }catch(err){
+    if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
+      micPermState='denied';
+      showPermModal(
+        '🚫','マイクがブロックされました',
+        '許可が拒否されました。ブラウザの設定から手動で許可してください。',
+        [
+          'Chromeのアドレスバー左の 🔒 アイコンをタップ',
+          '「サイトの設定」→「マイク」→「許可」に変更',
+          'ページをリロード後、もう一度お試しください',
+        ],
+        [],false
+      );
+    } else {
+      // Other errors (NotFoundError = no mic hardware, etc.)
+      showPermModal(
+        '🎤','マイクが見つかりません',
+        `マイクにアクセスできませんでした（${err.name}）。デバイスにマイクが接続されているか確認してください。`,
+        [],
+        [],false
+      );
+    }
+  }
+}
+
+function openVoiceFallback(){
+  openVoiceMode();
+  // Show the text fallback input inside voice overlay
+  document.getElementById('voice-text-fallback').classList.add('show');
+  document.getElementById('voice-main-btn').style.opacity='0.3';
+  document.getElementById('voice-main-btn').style.pointerEvents='none';
+  setVoiceUI('idle');
+  document.getElementById('voice-status-label').textContent='テキストで入力して練習しましょう';
+}
+
+async function sendVoiceText(){
+  const inp=document.getElementById('vtf-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('tf').textContent=text;
+  document.getElementById('voice-cards').innerHTML='';
+  setVoiceUI('processing');
+  appendChatMsg('user',text);
+  try{
+    const parsed=await callClaude(text);
+    document.getElementById('voice-cards').innerHTML='';
+    if(parsed.corrections&&parsed.corrections.length){
+      parsed.corrections.forEach(c=>{
+        addVCard('corr','✦ 修正',
+          `<span style="color:#fca5a5;text-decoration:line-through">${c.wrong}</span> `+
+          `<span style="color:var(--text-dim)">→</span> `+
+          `<span style="color:#86efac;font-weight:500">${c.right}</span>`+
+          `<div style="font-size:12px;color:var(--text-dim);margin-top:4px">${c.reason}</div>`
+        );
+      });
+    }
+    if(parsed.suggestions&&parsed.suggestions.length){
+      addVCard('sug','💡 こう言えます',
+        parsed.suggestions.map(s=>`<span class="sug-phrase" onclick="fillVTF('${s.replace(/'/g,"\\'")}')">`+`「${s}」</span>`).join('')
+      );
+    }
+    appendChatMsg('ai',parsed.reply,parsed.corrections,parsed.suggestions,parsed.vocab);
+    if(parsed.vocab&&parsed.vocab.length)saveVocab(parsed.vocab);
+    if(ttsEnabled&&parsed.reply){
+      setVoiceUI('speaking');
+      speakReply(parsed.reply,()=>{ setVoiceUI('idle'); document.getElementById('voice-status-label').textContent='テキストで入力して練習しましょう'; });
+    } else { setVoiceUI('idle'); document.getElementById('voice-status-label').textContent='テキストで入力して練習しましょう'; }
+  }catch(err){
+    const demo=demoReply(text);
+    appendChatMsg('ai',demo.reply,[],demo.suggestions,[]);
+    setVoiceUI('idle');
+    document.getElementById('voice-status-label').textContent='テキストで入力して練習しましょう';
+  }
+}
+
+function fillVTF(text){
+  document.getElementById('vtf-input').value=text;
+  document.getElementById('vtf-input').focus();
+}
+function killRecognition(){
+  if(recognition){try{recognition.abort();}catch(e){}recognition=null;}
+}
+function toggleListen(){
+  if(voiceState==='listening'){killRecognition();setVoiceUI('idle');return;}
+  if(voiceState==='speaking'){if(window.speechSynthesis)window.speechSynthesis.cancel();setVoiceUI('idle');return;}
+  if(voiceState==='processing')return;
+  startListening();
+}
+
+async function startListening(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){addVCard('corr','非対応','このブラウザは音声認識に対応していません。Chrome系ブラウザをお試しください。');return;}
+
+  // Request getUserMedia first — most reliable way to get Android Chrome mic permission dialog
+  if(micPermState!=='granted'){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.getTracks().forEach(t=>t.stop());
+      micPermState='granted';
+    }catch(err){
+      if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
+        micPermState='denied';
+        addVCard('corr','マイク拒否',
+          'マイクの許可が拒否されました。<br>'+
+          'アドレスバー左の 🔒 → 「サイトの設定」→「マイク」→「許可」に変更後リロードしてください。<br><br>'+
+          '<span style="color:var(--gold-light);cursor:pointer;text-decoration:underline" onclick="openVoiceFallback()">→ テキスト入力に切り替える</span>'
+        );
+      } else {
+        addVCard('corr','マイクエラー','マイクにアクセスできません（'+err.name+'）。デバイスのマイクを確認してください。');
+      }
+      return;
+    }
+  }
+
+  killRecognition();
+  recognition=new SR();
+  recognition.lang='ja-JP';
+  recognition.continuous=false;
+  recognition.interimResults=true;
+
+  document.getElementById('tf').textContent='';
+  document.getElementById('ti').textContent='';
+  document.getElementById('voice-cards').innerHTML='';
+
+  recognition.onstart=()=>setVoiceUI('listening');
+
+  recognition.onresult=(e)=>{
+    let finalText='';let interim='';
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal)finalText+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('tf').textContent=finalText;
+    document.getElementById('ti').textContent=interim;
+  };
+
+  recognition.onend=async()=>{
+    const text=(document.getElementById('tf').textContent).trim();
+    document.getElementById('ti').textContent='';
+    if(!text){setVoiceUI('idle');return;}
+    setVoiceUI('processing');
+    appendChatMsg('user',text);
+    try{
+      const parsed=await callClaude(text);
+      document.getElementById('voice-cards').innerHTML='';
+      if(parsed.corrections&&parsed.corrections.length){
+        parsed.corrections.forEach(c=>{
+          addVCard('corr','✦ 修正',
+            `<span style="color:#fca5a5;text-decoration:line-through">${c.wrong}</span>`+
+            ` <span style="color:var(--text-dim)">→</span> `+
+            `<span style="color:#86efac;font-weight:500">${c.right}</span>`+
+            `<div style="font-size:12px;color:var(--text-dim);margin-top:4px">${c.reason}</div>`
+          );
+        });
+      }
+      if(parsed.suggestions&&parsed.suggestions.length){
+        addVCard('sug','💡 こう言えます',
+          parsed.suggestions.map(s=>`<span class="sug-phrase" onclick="useSug('${s.replace(/'/g,"\\'")}')">`+`「${s}」</span>`).join('')
+        );
+      }
+      appendChatMsg('ai',parsed.reply,parsed.corrections,parsed.suggestions,parsed.vocab);
+      if(parsed.vocab&&parsed.vocab.length)saveVocab(parsed.vocab);
+      if(ttsEnabled&&parsed.reply){setVoiceUI('speaking');speakReply(parsed.reply,()=>setVoiceUI('idle'));}
+      else setVoiceUI('idle');
+    }catch(err){
+      const demo=demoReply(text);
+      document.getElementById('voice-cards').innerHTML='';
+      addVCard('sug','💡 こう言えます',
+        demo.suggestions.map(s=>`<span class="sug-phrase" onclick="useSug('${s.replace(/'/g,"\\'")}')">`+`「${s}」</span>`).join('')
+      );
+      appendChatMsg('ai',demo.reply,[],demo.suggestions,[]);
+      if(ttsEnabled){setVoiceUI('speaking');speakReply(demo.reply,()=>setVoiceUI('idle'));}
+      else setVoiceUI('idle');
+    }
+  };
+
+  recognition.onerror=(e)=>{
+    if(e.error==='aborted')return;
+    const msg=e.error==='not-allowed'
+      ?'マイクの許可が必要です。<br><span style="color:var(--gold-light);cursor:pointer;text-decoration:underline" onclick="openVoiceFallback()">→ テキスト入力に切り替える</span>'
+      :'音声認識エラー: '+e.error;
+    addVCard('corr','エラー',msg);
+    setVoiceUI('idle');
+  };
+
+  recognition.start();
+}
+
+function addVCard(type,label,html){
+  const d=document.createElement('div');
+  d.className='voice-card '+type;
+  d.innerHTML=`<div class="vc-label">${label}</div>${html}`;
+  document.getElementById('voice-cards').appendChild(d);
+  d.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function useSug(text){
+  closeVoiceMode();
+  switchTab(document.querySelector('[data-screen="chat"]'));
+  // Wait for tab transition + input area to become visible before filling & sending
+  setTimeout(()=>{
+    const inp=document.getElementById('chat-input');
+    inp.value=text;autoResize(inp);
+    sendChatMessage();
+  },400);
+}
+
+/* ── CHAT MIC ── */
+function toggleChatMic(){
+  if(chatMicActive){stopChatMic();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert('音声認識に対応していません。');return;}
+  chatRec=new SR();chatRec.lang='ja-JP';chatRec.continuous=false;chatRec.interimResults=true;
+  chatRec.onstart=()=>{chatMicActive=true;document.getElementById('mic-btn').classList.add('recording');document.getElementById('mic-btn').textContent='⏹';};
+  chatRec.onresult=(e)=>{
+    let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    document.getElementById('chat-input').value=t;autoResize(document.getElementById('chat-input'));
+  };
+  chatRec.onend=()=>stopChatMic();
+  chatRec.onerror=()=>stopChatMic();
+  chatRec.start();
+}
+function stopChatMic(){
+  chatMicActive=false;
+  document.getElementById('mic-btn').classList.remove('recording');
+  document.getElementById('mic-btn').textContent='🎙';
+  if(chatRec){try{chatRec.stop();}catch(e){}chatRec=null;}
+}
+
+/* ── SEND CHAT ── */
+async function sendChatMessage(){
+  const inp=document.getElementById('chat-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';autoResize(inp);
+  appendChatMsg('user',text);
+  const thinking=appendThinking();
+  scrollChatBottom();
+  try{
+    const parsed=await callClaude(text);
+    thinking.remove();
+    appendChatMsg('ai',parsed.reply,parsed.corrections,parsed.suggestions,parsed.vocab);
+    if(parsed.vocab&&parsed.vocab.length)saveVocab(parsed.vocab);
+  }catch(err){
+    thinking.remove();
+    const demo=demoReply(text);
+    appendChatMsg('ai',demo.reply,[],demo.suggestions,[]);
+  }
+  scrollChatBottom();
+}
+
+/* ── APPEND CHAT MSG ── */
+function appendChatMsg(role,text,corrections,suggestions,vocab){
+  const c=document.getElementById('chat-messages');
+  const div=document.createElement('div');
+  div.className='msg '+role;
+
+  const lbl=document.createElement('div');lbl.className='msg-label';
+  lbl.textContent=role==='ai'?'京都先生':'あなた';
+  div.appendChild(lbl);
+
+  const bub=document.createElement('div');bub.className='msg-bubble';
+  bub.innerHTML=(text||'').replace(/\n/g,'<br>');
+  div.appendChild(bub);
+
+  if(role==='ai'&&text){
+    const acts=document.createElement('div');acts.className='msg-actions';
+    const pb=document.createElement('button');pb.className='msg-play-btn';pb.innerHTML='▶ 再生';
+    pb.onclick=()=>speakText(pb,text);acts.appendChild(pb);div.appendChild(acts);
+  }
+
+  if(corrections&&corrections.length){
+    corrections.forEach(c=>{
+      const cd=document.createElement('div');cd.className='correction';
+      cd.innerHTML=`<div class="corr-label">✦ 修正</div>`+
+        `<span class="corr-wrong">${c.wrong}</span>`+
+        `<span class="corr-arrow">→</span>`+
+        `<span class="corr-right">${c.right}</span>`+
+        `<div class="corr-reason">${c.reason}</div>`;
+      div.appendChild(cd);
+    });
+  }
+
+  if(suggestions&&suggestions.length){
+    const sd=document.createElement('div');sd.className='suggestion';
+    sd.innerHTML=`<div class="sug-label">💡 こう言ってみましょう</div>`+
+      suggestions.map(s=>`<span class="sug-phrase" onclick="insertSug('${s.replace(/'/g,"\\'")}')">`+`「${s}」</span>`).join('');
+    div.appendChild(sd);
+  }
+
+  if(vocab&&vocab.length){
+    const vd=document.createElement('div');vd.className='vocab-block';
+    vd.innerHTML=vocab.map(v=>`<div class="vocab-item"><span class="vocab-jp">${v.jp}</span><span class="vocab-def">[${v.level||'N'}] ${v.zh||''}</span></div>`).join('');
+    div.appendChild(vd);
+  }
+
+  c.appendChild(div);
+  scrollChatBottom();
+}
+
+function insertSug(text){
+  const inp=document.getElementById('chat-input');
+  inp.value=text;autoResize(inp);inp.focus();
+}
+
+function appendThinking(){
+  const c=document.getElementById('chat-messages');
+  const d=document.createElement('div');d.className='msg ai';
+  d.innerHTML=`<div class="msg-label">京都先生</div><div class="msg-bubble" style="padding:14px 16px"><div class="thinking"><span></span><span></span><span></span></div></div>`;
+  c.appendChild(d);return d;
+}
+function scrollChatBottom(){
+  const s=document.getElementById('screen-chat');
+  setTimeout(()=>s.scrollTop=s.scrollHeight,60);
+}
+
+/* ── VOCAB SAVE ── */
+function saveVocab(arr){
+  const list=document.getElementById('vocab-list');
+  arr.forEach(v=>{
+    if(savedVocabSet.has(v.jp))return;
+    savedVocabSet.add(v.jp);
+    const lvl=(v.level||'N2').toLowerCase();
+    const d=document.createElement('div');d.className='vocab-card';
+    d.innerHTML=`<div class="vocab-level level-${lvl}">${v.level||'N2'}</div>`+
+      `<div class="vocab-content"><div class="vocab-jp-main">${v.jp}</div><div class="vocab-zh">${v.zh||''}</div></div>`;
+    list.insertBefore(d,list.firstChild);
+  });
+}
+
+/* ── DEMO FALLBACK ── */
+function demoReply(input){
+  return{
+    reply:'なるほど、素晴らしいですね！京都のファッションシーンは、伝統と革新が見事に融合しています。あなたはどのようなスタイルが好きですか？',
+    corrections:[],
+    suggestions:['もう少し詳しく教えてください','例えばどんなものですか','それはとても興味深いですね'],
+    vocab:[]
+  };
+}
+</script>
+</body>
+</html>
